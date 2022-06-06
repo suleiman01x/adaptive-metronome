@@ -91,65 +91,19 @@ class NoteHistory:
 					break
 		return note_hist
 
-	def get_bpm(self, range: int, delta=.025):
+	def get_bpm(self, range: int):
 		'''Calculates BPM from Beat Induction algorithm
 		Ref: Simon Dixon, Emilios Cambouropoulos, 2000, "Beat Tracking with Musical Knowledge"
 		Emilios Cambouropoulos, 2000, From MIDI to Traditional Musical Notation'''
 		if len(self.notes()) < 2:
 			return 0
 
-		hist = self.notes()[-range:]
-		clusters = []
-
-		# IOI clustering
-		intervals = itertools.permutations(hist)
-
-		for group in intervals:
-			a = group[0]
-			b = group[1]
-
-			if a.timestamp > b.timestamp:
-				continue
-
-			interval = b.timestamp - a.timestamp
-			if not 0.025 < interval < 2.5:
-				#print(f"too short{interval}")
-				continue
-
-			#print(interval)
-
-			if len(clusters) == 0:
-				clusters.append([Interval(a, b)])
-				continue
-
-			nearest_clust =  []
-			index = 0
-			for clust in clusters:
-				if len(nearest_clust) == 0:
-					nearest_clust = clust
-					index = clusters.index(clust)
-					continue
-
-				diff = abs(Interval.avg_intervals(clust) - interval)
-				if diff < Interval.avg_intervals(nearest_clust):
-					nearest_clust = clust
-					index = clusters.index(clust)
-
-			if len(nearest_clust) == 0:
-				continue
-
-			#print(f"nearest: {Interval.avg_intervals(nearest_clust)}")
-			if abs(Interval.avg_intervals(nearest_clust) - interval) < delta:
-				clusters[index].append(Interval(a, b))
-			else:
-				clusters.append([Interval(a, b)])
-
-		largest_strength = clusters[0]
-		for clust in clusters:
-			if Interval.sum_strength(clust) > Interval.sum_strength(largest_strength):
-				largest_strength = clust
-
-		return Interval.avg_intervals(largest_strength)
+		notes = self.notes()[-range:]
+		all_intervals = Cluster.from_notes(notes)
+		clusters_1 = split_cluster(all_intervals)
+		print(clusters_1)
+		for c in clusters_1:
+			print(c.avg(), [i.time for i in c.intervals])
 
 class Interval:
 	def __init__(self, note1: Note, note2: Note):
@@ -161,20 +115,58 @@ class Interval:
 		return 60 / self.time
 
 	def strength(self):
+		if not self.note1:
+			return 0
 		return self.note1.strength() + self.note2.strength()
 
-	@staticmethod
-	def avg_intervals(list):
-		return mean([d.time for d in list])
+class Cluster:
+	def __init__(self, intervals = []):
+		self.intervals = intervals
 
-	def avgint_diff(list1, list2):
-		return abs(Interval.avg_intervals(list1) - Interval.avg_intervals(list2))
+	def avg(self):
+		return mean([d.time for d in self.intervals])
 
-	def sum_strength(list):
+	def add(self, interval):
+		self.intervals.append(interval)
+
+	def sum_strength(self):
 		strength = 0
-		for note in list:
-			strength += note.strength()
+		for interval in self.intervals:
+			strength += interval.strength()
 		return strength
+
+	def is_near(self, interval_time, range):
+		return abs(self.avg() - interval_time) <= range
+
+	@staticmethod
+	def join(clust1, clust2):
+		all = clust1.intervals + clust2.intervals
+		return Cluster(all)
+
+	@staticmethod
+	def from_notes(notes=[]):
+		intervals = []
+		for a in notes:
+			for b in notes:
+				if a.timestamp >= b.timestamp:
+					continue
+				intervals.append(Interval(a, b))
+		return Cluster(intervals)
+
+def split_cluster(cluster):
+	clusters = [Cluster([Interval(Note(1,127,0,1), Note(1,127,0,1))])]
+	for i in cluster.intervals:
+		if i.time <= 0.025 or i.time >= 2.5:
+			continue
+
+		for c in clusters:
+			if c.is_near(i.time, 0.025):
+				c.add(i)
+				break
+		else:
+			clusters.append(Cluster([i]))
+
+	return clusters
 
 def clamp(n: int, min_v: int, max_v: int):
 	'''Limits n to a range(min, max)'''
@@ -192,13 +184,12 @@ if __name__ == "__main__":
 		NoteData(pitch=3),
 		NoteData(status=128, pitch=3),
 	]
-
 	hist =  NoteHistory()
-
 	for note in testnotes:
 		hist.add(note, time.perf_counter())
 		time.sleep(.1)
 
 	for note in hist.notes():
 		print(f'Pitch: {note.pitch}, Duration: {note.duration}, Strength: {note.strength()}')
-	print(60 / hist.get_bpm(20))
+
+	print("hist.get_bpm(20):",hist.get_bpm(20))
