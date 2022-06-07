@@ -100,10 +100,16 @@ class NoteHistory:
 
 		notes = self.notes()[-range:]
 		all_intervals = Cluster.from_notes(notes)
-		clusters_1 = split_cluster(all_intervals)
-		print(clusters_1)
-		for c in clusters_1:
-			print(c.avg(), [i.time for i in c.intervals])
+		clusters = split_cluster(all_intervals)
+
+		max_cluster = clusters[0]
+		for c in clusters:
+			print(c.avg(), c.sum_strength())
+			if c.sum_strength() > max_cluster.sum_strength():
+				max_cluster = c
+
+		print(max_cluster)
+		return max_cluster.avg()
 
 class Interval:
 	def __init__(self, note1: Note, note2: Note):
@@ -154,7 +160,7 @@ class Cluster:
 		return Cluster(intervals)
 
 def split_cluster(cluster):
-	clusters = [Cluster([Interval(Note(1,127,0,1), Note(1,127,0,1))])]
+	clusters = [Cluster([Interval(Note(0,0,0,0), Note(0,0,0,0))])]
 	for i in cluster.intervals:
 		if i.time <= 0.025 or i.time >= 2.5:
 			continue
