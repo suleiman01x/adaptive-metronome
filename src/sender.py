@@ -1,7 +1,7 @@
 import socket
 import time
 import pygame.midi as midi
-from midi import NoteData, NoteHistory
+from .midi import NoteData, NoteHistory
 
 class Sender:
 	def __init__(self, ip, port, M_SIZE=1024):

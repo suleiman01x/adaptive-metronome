@@ -2,9 +2,7 @@ import socket
 from threading import Timer
 from mingus.midi import fluidsynth
 from ping3 import ping
-from midi import NoteData, NoteHistory
-
-note_hist = NoteHistory()
+from .midi import NoteData, NoteHistory
 
 class Reciever:
 	def __init__(self, ip, port, M_SIZE=1024):
@@ -26,18 +24,12 @@ class Reciever:
 		raw = message.decode("utf-8").split(",")
 
 		note = NoteData(raw[0], raw[1], raw[2], raw[3])
-		global note_hist
-		note_hist.add(note, float(raw[3]))
+		self.note_history.add(note, float(raw[3]))
 
 		note._print()
 		return note
 
-	def play_note(self, note):
-		pass
-
-def ping_log():
-	global note_hist
-	global ip
+def ping_log(ip, note_hist):
 	print("calc_bpm")
 	cur_bpm = note_hist.get_bpm(20)
 	print(f"latency: {ping(ip)}, bpm: {60/cur_bpm if not cur_bpm == 0 else 1}")
