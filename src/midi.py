@@ -104,11 +104,9 @@ class NoteHistory:
 
 		max_cluster = clusters[0]
 		for c in clusters:
-			print(c.avg(), c.sum_strength())
 			if c.sum_strength() > max_cluster.sum_strength():
 				max_cluster = c
 
-		print(max_cluster)
 		return max_cluster.avg()
 
 class Interval:
@@ -178,24 +176,3 @@ def clamp(n: int, min_v: int, max_v: int):
 	'''Limits n to a range(min, max)'''
 	v = max(min(max_v, n), min_v)
 	return v
-
-if __name__ == "__main__":
-	testnotes = [
-		NoteData(pitch=3),
-		NoteData(status=128, pitch=3),
-		NoteData(pitch=2),
-		NoteData(status=128, pitch=2),
-		NoteData(pitch=5),
-		NoteData(status=128, pitch=5),
-		NoteData(pitch=3),
-		NoteData(status=128, pitch=3),
-	]
-	hist =  NoteHistory()
-	for note in testnotes:
-		hist.add(note, time.perf_counter())
-		time.sleep(.1)
-
-	for note in hist.notes():
-		print(f'Pitch: {note.pitch}, Duration: {note.duration}, Strength: {note.strength()}')
-
-	print("hist.get_bpm(20):",hist.get_bpm(20))
